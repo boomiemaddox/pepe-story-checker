@@ -1,8 +1,9 @@
 fastapi
 uvicorn
-requests
 telethon
+python-dotenv
+requests
 scikit-image
+opencv-python-headless
+pillow
 numpy
-Pillow
-opencv-python

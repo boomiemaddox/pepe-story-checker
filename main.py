@@ -11,17 +11,17 @@ import io
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # ✅ Загружаем переменные окружения
+load_dotenv()
 
 
-# вставьте нужные данные пожалуйста, спасибо
+
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
 FETCH_USERS_URL = "https://peparioserver-xcy5.onrender.com/api/telegram/users-stories"
 VERIFY_STORY_URL = "https://peparioserver-xcy5.onrender.com/api/telegram/verify-story?username={username}"
 
-# === СОЗДАЕМ СЕРВИС ===
+
 app = FastAPI()
 
 @app.get("/api/verify_stories")
@@ -67,7 +67,7 @@ async def get_latest_story(client, username):
         return None
 
 def get_initial_story_image(username):
-    # тут нужно будет получать URL загруженного изображения (первоначальная сторис)
+    # тут нужно будет получать URL загруженного изображения 
     return None
 
 def download_image(url):
