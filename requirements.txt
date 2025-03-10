@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+requests
+telethon
+scikit-image
+numpy
+Pillow
+opencv-python
