@@ -19,23 +19,18 @@ SESSION_STRING = os.getenv("SESSION_STRING")
 X_AUTH_KEY = "3730a1cfc7b4bb32645b38bf32ace833e1592eb9a686872c4ed78de2a0e8dc0d"
 
 FETCH_USERS_URL = "https://peparioserver-xcy5.onrender.com/api/telegram/users-stories"
-VERIFY_STORY_URL = "https://peparioserver-xcy5.onrender.com/api/telegram/verify-story?id={user_id}"
-ADD_STORY_URL = "https://peparioserver-xcy5.onrender.com/api/telegram/add-story"
+VERIFY_STORY_URL = "https://peparioserver-xcy5.onrender.com/api/telegram/verify-story?username={username}"
 
 app = FastAPI()
 
 @app.get("/api/verify_stories")
 async def verify_stories():
     async with TelegramClient("session", API_ID, API_HASH) as client:
-        users = fetch_users_to_verify()
+        usernames = fetch_users_to_verify()
 
-        for user in users:
-            username = user.get("username")
-            user_id = user.get("id")
+        verified_users = []
 
-            if not username or not user_id:
-                continue
-
+        for username in usernames:
             latest_story = await get_latest_story(client, username)
             if latest_story is None:
                 continue
@@ -49,17 +44,18 @@ async def verify_stories():
                 continue
 
             if compare_images(latest_story, expected_image):
-                verify_user_story(user_id)
-                print(f"✅ @{username} ({user_id}) верифицирован!")
+                verify_user_story(username)
+                verified_users.append(username)
+                print(f"✅ @{username} верифицирован!")
 
-    return {"success": True, "message": "Все пользователи проверены"}
+    return {"success": True, "verified_users": verified_users}
 
 def fetch_users_to_verify():
     headers = {"X-Auth-Key": X_AUTH_KEY}
     response = requests.get(FETCH_USERS_URL, headers=headers)
     
     if response.status_code == 200:
-        return response.json()
+        return response.json()  # Теперь просто список юзернеймов
     return []
 
 async def get_latest_story(client, username):
@@ -74,7 +70,7 @@ async def get_latest_story(client, username):
         return None
 
 def get_initial_story_image(username):
-    return "https://i.imgur.com/mWzitST.jpeg"
+    return "https://i.imgur.com/mWzitST.jpeg"  # Временно жестко заданное изображение
 
 def download_image(url):
     try:
@@ -90,14 +86,13 @@ def compare_images(img1, img2, threshold=0.6):
     similarity, _ = ssim(img1, img2, full=True)
     return similarity >= threshold
 
-def verify_user_story(user_id):
+def verify_user_story(username):
     headers = {"X-Auth-Key": X_AUTH_KEY}
-    response = requests.head(VERIFY_STORY_URL.format(user_id=user_id), headers=headers)
+    response = requests.head(VERIFY_STORY_URL.format(username=username), headers=headers)
     
     if response.status_code == 200:
-        print(f"✅ История для ID {user_id} подтверждена!")
+        print(f"✅ История для @{username} подтверждена!")
         return True
     else:
-        print(f"❌ Ошибка подтверждения истории ID {user_id}")
+        print(f"❌ Ошибка подтверждения истории @{username}")
         return False
-
