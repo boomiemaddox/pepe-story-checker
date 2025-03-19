@@ -41,7 +41,7 @@ def get_verified_users():
 async def verify_stories():
     logger.info("🔍 Verifying stories...")
 
-    async with TelegramClient("session", API_ID, API_HASH) as client:
+    async with TelegramClient("pepe_story_checker.session", API_ID, API_HASH) as client:
         logger.info("✅ Telegram client connected successfully.")
         usernames = await fetch_users_to_verify()
         logger.info(f"🧑‍🤝‍🧑 Users to verify: {usernames}")
