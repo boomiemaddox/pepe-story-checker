@@ -1,2 +1,2 @@
-﻿.env.env
-session.session
+﻿.env
+*.session
