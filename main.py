@@ -37,6 +37,7 @@ async def verify_stories():
     logger.info(f"рџ“Ў Verifying stories...")
 
     async with TelegramClient("session", API_ID, API_HASH) as client:
+        logger.info("✅ Telegram client connected successfully.")
         usernames = fetch_users_to_verify()
         logger.info(f"рџ‘Ґ Users to verify: {usernames}")
 
@@ -68,11 +69,11 @@ async def verify_stories():
 
     return {"success": True, "verified_users": verified_users}
 
-def fetch_users_to_verify():
+async def fetch_users_to_verify():
     headers = {"X-Auth-Key": X_AUTH_KEY}
     logger.info(f"🔑 Sending request to fetch users with X-Auth-Key: {X_AUTH_KEY}")
     
-    response = requests.get(FETCH_USERS_URL, headers=headers)
+    response = await asyncio.to_thread(requests.get, FETCH_USERS_URL, headers=headers)    
     
     logger.info(f"📩 Response Status Code: {response.status_code}")
     logger.info(f"📄 Response Content: {response.text}")

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+telethon
+requests
+python-dotenv
+pillow
+skimage
+opencv-python-headless
+numpy
