@@ -1,0 +1,3 @@
+[submodule "telegram-stories-viewer-bot"]
+	path = telegram-stories-viewer-bot
+	url = https://github.com/chupapee/telegram-stories-viewer-bot
