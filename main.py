@@ -2,6 +2,7 @@ import logging
 import requests
 import asyncio
 import io
+import base64
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -19,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
+
+session_data = os.getenv("SESSION_STRING")
+if session_data:
+    with open("pepe_story_checker.session", "wb") as session_file:
+        session_file.write(base64.b64decode(session_data))
 
 # Environment variables
 API_ID = os.getenv("API_ID")
