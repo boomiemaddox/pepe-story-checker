@@ -13,21 +13,26 @@ import cv2
 import numpy as np
 from PIL import Image
 
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
 load_dotenv()
 
+# Environment variables
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
 X_AUTH_KEY = os.getenv("X_AUTH_KEY")
-FETCH_USERS_URL = os.getenv("FETCH_USERS_URL", "https://peparioserverdev.onrender.com/api/telegram/users-stories")
-VERIFY_STORY_URL = os.getenv("VERIFY_STORY_URL", "https://peparioserverdev.onrender.com/api/telegram/verify-story?username={username}")
+FETCH_USERS_URL = 'https://peparioserverdev.onrender.com/api/telegram/users-stories'
+VERIFY_STORY_URL = 'https://peparioserverdev.onrender.com/api/telegram/verify-story?username={username}'
 
+# Initialize FastAPI
 app = FastAPI()
 
-verified_users_cache = []  # Global cache for storing verified users
+# Global cache for storing verified users
+verified_users_cache = []
 
 @app.get("/")
 def read_root():
@@ -66,14 +71,13 @@ async def verify_stories():
                 logger.warning(f"⚠️ Failed to download reference image for @{username}!")
                 continue
 
-            if compare_images(latest_story, expected_image):
-                similarity_score, is_similar = compare_images(latest_story, expected_image)
-                if is_similar:
-                    success = verify_user_story(username, similarity_score)
-                    if success:
-                        verified_users_cache.append(username)
-                        logger.info(f"✅ @{username} verified successfully!")
-
+            # Compare images and verify user story
+            similarity_score, is_similar = compare_images(latest_story, expected_image)
+            if is_similar:
+                success = verify_user_story(username, similarity_score)
+                if success:
+                    verified_users_cache.append(username)
+                    logger.info(f"✅ @{username} verified successfully!")
 
     return {"success": True, "verified_users": verified_users_cache}
 
@@ -89,10 +93,11 @@ async def fetch_users_to_verify():
     if response.status_code == 200:
         users = response.json()
         logger.info(f"✅ Users fetched: {users}")
-        return users if users else ["boomiemaddox", "toronto_ls", "pepario"]
+        return users
 
     logger.error(f"❌ Error fetching users: {response.status_code} - {response.text}")
-    return ["boomiemaddox", "toronto_ls", "pepario"]  # Fall back to default hardcoded users
+    return []
+
 
 async def get_latest_story(client, username):
     try:
@@ -117,12 +122,10 @@ async def get_latest_story(client, username):
     return None
 
 def verify_user_story(username, similarity_score):
-    # logger.info(f"✅ Mock verification for @{username} with similarity score {similarity_score}")
-    # return True
     headers = {"X-Auth-Key": X_AUTH_KEY}
     try:
-        logger.info(f"🔗 Sending verification (HEAD) request for @{username} to {VERIFY_STORY_URL.format(username=username)}")
-        response = requests.head(VERIFY_STORY_URL.format(username=username), headers=headers)
+        logger.info(f"🔗 Sending verification (GET) request for @{username} to {VERIFY_STORY_URL.format(username=username)}")
+        response = requests.get(VERIFY_STORY_URL.format(username=username), headers=headers)
         logger.info(f"🔗 Verification Response: {response.status_code} - {response.text}")
 
         if response.status_code == 200:
@@ -134,9 +137,8 @@ def verify_user_story(username, similarity_score):
         logger.error(f"❌ Error during verification of @{username}: {e}")
     return False
 
-
-
 def get_initial_story_image(username):
+    # Replace this with the actual logic to fetch initial images for specific users
     return "https://i.imgur.com/HcUg3Bm.jpeg"
 
 def download_image(url):
@@ -163,4 +165,4 @@ def compare_images(img1, img2, threshold=0.6):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
