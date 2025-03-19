@@ -4,6 +4,6 @@ telethon
 requests
 python-dotenv
 pillow
-skimage
+scikit-image
 opencv-python-headless
 numpy
