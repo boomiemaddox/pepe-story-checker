@@ -1,3 +1,2 @@
 ﻿build:
   pythonVersion: "3.10"
-  poetryVersion: "2.1.1"

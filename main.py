@@ -27,54 +27,62 @@ VERIFY_STORY_URL = os.getenv("VERIFY_STORY_URL", "https://peparioserverdev.onren
 
 app = FastAPI()
 
+verified_users_cache = []  # Global cache for storing verified users
+
 @app.get("/")
 def read_root():
     return {"message": "Pepe Story Checker is running!"}
 
+@app.get("/api/verified_users")
+def get_verified_users():
+    return {"verified_users": verified_users_cache}
 
 @app.get("/api/verify_stories")
 async def verify_stories():
-    logger.info(f"рџ“Ў Verifying stories...")
+    logger.info("🔍 Verifying stories...")
 
     async with TelegramClient("session", API_ID, API_HASH) as client:
         logger.info("✅ Telegram client connected successfully.")
-        usernames = fetch_users_to_verify()
-        logger.info(f"рџ‘Ґ Users to verify: {usernames}")
-
-        verified_users = []
+        usernames = await fetch_users_to_verify()
+        logger.info(f"🧑‍🤝‍🧑 Users to verify: {usernames}")
 
         for username in usernames:
-            logger.info(f"рџ”Ќ Checking @{username}")
+            logger.info(f"🔎 Checking @{username}")
 
+            # Fetch the latest story
             latest_story = await get_latest_story(client, username)
             if latest_story is None:
-                logger.warning(f"вќЊ @{username} has no stories!")
+                logger.warning(f"⚠️ @{username} has no stories!")
                 continue
 
+            # Get the reference image and compare
             expected_image_url = get_initial_story_image(username)
-            if expected_image_url is None:
-                logger.warning(f"вќЊ No reference image found for @{username}!")
+            if not expected_image_url:
+                logger.warning(f"⚠️ No reference image found for @{username}!")
                 continue
 
             expected_image = download_image(expected_image_url)
-            if expected_image is None:
-                logger.warning(f"вќЊ Failed to download reference image for @{username}!")
+            if not expected_image:
+                logger.warning(f"⚠️ Failed to download reference image for @{username}!")
                 continue
 
             if compare_images(latest_story, expected_image):
-                success = verify_user_story(username)
-                if success:
-                    verified_users.append(username)
-                    logger.info(f"вњ… @{username} verified successfully!")
+                similarity_score, is_similar = compare_images(latest_story, expected_image)
+                if is_similar:
+                    success = verify_user_story(username, similarity_score)
+                    if success:
+                        verified_users_cache.append(username)
+                        logger.info(f"✅ @{username} verified successfully!")
 
-    return {"success": True, "verified_users": verified_users}
+
+    return {"success": True, "verified_users": verified_users_cache}
 
 async def fetch_users_to_verify():
     headers = {"X-Auth-Key": X_AUTH_KEY}
     logger.info(f"🔑 Sending request to fetch users with X-Auth-Key: {X_AUTH_KEY}")
     
-    response = await asyncio.to_thread(requests.get, FETCH_USERS_URL, headers=headers)    
-    
+    # Asynchronous request using asyncio
+    response = await asyncio.to_thread(requests.get, FETCH_USERS_URL, headers=headers)
     logger.info(f"📩 Response Status Code: {response.status_code}")
     logger.info(f"📄 Response Content: {response.text}")
 
@@ -82,46 +90,50 @@ async def fetch_users_to_verify():
         users = response.json()
         logger.info(f"✅ Users fetched: {users}")
         return users if users else ["boomiemaddox", "toronto_ls", "pepario"]
-    
+
     logger.error(f"❌ Error fetching users: {response.status_code} - {response.text}")
-    return []
-
-
-
+    return ["boomiemaddox", "toronto_ls", "pepario"]  # Fall back to default hardcoded users
 
 async def get_latest_story(client, username):
     try:
         logger.info(f"📸 Fetching latest story for @{username}")
         entity = await client.get_entity(username)
         response = await client(GetPeerStoriesRequest(peer=entity))
-
         logger.info(f"📝 Raw Stories Response for @{username}: {response}")
 
         if response.stories.stories:
             latest_story = response.stories.stories[-1]
-            media = latest_story.media  
+            media = latest_story.media
 
             if isinstance(media, MessageMediaPhoto) and hasattr(media, "photo"):
                 buffer = await client.download_media(media.photo, bytes)
                 return Image.open(io.BytesIO(buffer))
-
-            logger.warning(f"❌ @{username}'s latest story is not a photo!")
+            
+            logger.warning(f"⚠️ @{username}'s latest story is not a photo!")
         else:
-            logger.warning(f"❌ @{username} has no stories!")
-
+            logger.warning(f"⚠️ @{username} has no stories!")
     except Exception as e:
         logger.error(f"❌ Error fetching story for @{username}: {e}")
-    
     return None
 
-
-def verify_user_story(username):
+def verify_user_story(username, similarity_score):
+    # logger.info(f"✅ Mock verification for @{username} with similarity score {similarity_score}")
+    # return True
     headers = {"X-Auth-Key": X_AUTH_KEY}
-    response = requests.post(VERIFY_STORY_URL.format(username=username), headers=headers)
+    try:
+        logger.info(f"🔗 Sending verification (HEAD) request for @{username} to {VERIFY_STORY_URL.format(username=username)}")
+        response = requests.head(VERIFY_STORY_URL.format(username=username), headers=headers)
+        logger.info(f"🔗 Verification Response: {response.status_code} - {response.text}")
 
-    if response.status_code == 200:
-        return True
+        if response.status_code == 200:
+            logger.info(f"✅ Verification successful for @{username}")
+            return True
+
+        logger.error(f"❌ Verification failed for @{username}: {response.status_code} - {response.text}")
+    except Exception as e:
+        logger.error(f"❌ Error during verification of @{username}: {e}")
     return False
+
 
 
 def get_initial_story_image(username):
@@ -129,28 +141,24 @@ def get_initial_story_image(username):
 
 def download_image(url):
     try:
-        logger.info(f"рџ”Ѕ Downloading image: {url}")
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
+        logger.info(f"📥 Downloading image: {url}")
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return Image.open(io.BytesIO(response.content))
-        else:
-            logger.error(f"вќЊ Image download failed! HTTP Status: {response.status_code}")
-            return None
+        logger.error(f"⚠️ Image download failed! HTTP Status: {response.status_code}")
     except Exception as e:
-        logger.error(f"вќЊ Error downloading image: {e}")
-        return None
+        logger.error(f"❌ Error downloading image: {e}")
+    return None
 
 def compare_images(img1, img2, threshold=0.6):
     img1 = cv2.cvtColor(np.array(img1), cv2.COLOR_RGB2GRAY)
     img2 = cv2.cvtColor(np.array(img2), cv2.COLOR_RGB2GRAY)
-    img1 = cv2.resize(img1, (img2.shape[1], img2.shape[0])) 
-    
+    img1 = cv2.resize(img1, (img2.shape[1], img2.shape[0]))
+
     similarity, _ = ssim(img1, img2, full=True)
-    logger.info(f"рџ“Љ Image similarity score: {similarity:.2f}")
-    return similarity >= threshold
+    logger.info(f"📊 Image similarity score: {similarity:.2f}")
+    return similarity, similarity >= threshold
 
 if __name__ == "__main__":
     import uvicorn
