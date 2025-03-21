@@ -119,9 +119,11 @@ async def manual_verify(username: str):
             logger.warning(f"⚠️ Failed to download reference image for @{username}!")
             return {"success": False, "error": "Failed to download reference image"}
 
-        # Compare images
-        similarity_score, is_similar = compare_images(latest_story, expected_image, threshold=0.6)  # Use threshold of 0.6 (60%)
-        if is_similar:
+        # Compare images and check similarity score
+        similarity_score, _ = compare_images(latest_story, expected_image)
+        logger.info(f"📊 Calculated similarity score for @{username}: {similarity_score:.2f}")
+
+        if similarity_score >= 0.6:  # Direct check against the threshold
             success = verify_user_story(username, similarity_score)
             if success:
                 verified_users_cache.append(username)
@@ -130,15 +132,16 @@ async def manual_verify(username: str):
                     "success": True,
                     "username": username,
                     "similarity_score": similarity_score,
-                    "message": f"User @{username} has been successfully verified based on {similarity_score * 100:.2f}% similarity!"
+                    "message": f"User @{username} verified with a similarity score of {similarity_score * 100:.2f}%!"
                 }
 
         return {
             "success": False,
             "username": username,
-            "error": "Story verification failed",
-            "similarity_score": similarity_score
+            "similarity_score": similarity_score,
+            "error": f"Verification failed. Similarity score {similarity_score * 100:.2f}% is below the threshold of 60%."
         }
+
 
 
 
