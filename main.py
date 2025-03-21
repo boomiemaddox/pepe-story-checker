@@ -174,8 +174,8 @@ async def get_latest_story(client, username):
 def verify_user_story(username, similarity_score):
     headers = {"X-Auth-Key": X_AUTH_KEY}
     try:
-        logger.info(f"🔗 Sending verification (GET) request for @{username} to {VERIFY_STORY_URL.format(username=username)}")
-        response = requests.get(VERIFY_STORY_URL.format(username=username), headers=headers)
+        logger.info(f"🔗 Sending verification (HEAD) request for @{username} to {VERIFY_STORY_URL.format(username=username)}")
+        response = requests.head(VERIFY_STORY_URL.format(username=username), headers=headers)
         logger.info(f"🔗 Verification Response: {response.status_code} - {response.text}")
 
         if response.status_code == 200:
@@ -186,6 +186,7 @@ def verify_user_story(username, similarity_score):
     except Exception as e:
         logger.error(f"❌ Error during verification of @{username}: {e}")
     return False
+
 
 def get_initial_story_image(username):
     # Replace this with the actual logic to fetch initial images for specific users
