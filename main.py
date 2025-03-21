@@ -35,7 +35,14 @@ FETCH_USERS_URL = 'https://peparioserverdev.onrender.com/api/telegram/users-stor
 VERIFY_STORY_URL = 'https://peparioserverdev.onrender.com/api/telegram/verify-story?username={username}'
 
 # Initialize FastAPI
-app = FastAPI()
+app = FastAPI(
+    title="Pepe Story Checker",
+    description="API for verifying Telegram stories.",
+    version="1.0.0",
+    openapi_url="/openapi.json",  
+    docs_url="/swagger/index.html", 
+)
+
 
 # Global cache for storing verified users
 verified_users_cache = []
