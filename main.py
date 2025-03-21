@@ -87,6 +87,43 @@ async def verify_stories():
 
     return {"success": True, "verified_users": verified_users_cache}
 
+@app.post("/api/manual_verify")
+async def manual_verify(username: str):
+    logger.info(f"🔍 Manually verifying @{username}")
+
+    # Connect to Telegram Client
+    async with TelegramClient("pepe_story_checker.session", API_ID, API_HASH) as client:
+        logger.info("✅ Telegram client connected successfully.")
+
+        # Fetch the latest story
+        latest_story = await get_latest_story(client, username)
+        if latest_story is None:
+            logger.warning(f"⚠️ @{username} has no stories!")
+            return {"success": False, "error": "No stories found"}
+
+        # Get the reference image
+        expected_image_url = get_initial_story_image(username)
+        if not expected_image_url:
+            logger.warning(f"⚠️ No reference image found for @{username}!")
+            return {"success": False, "error": "No reference image found"}
+
+        expected_image = download_image(expected_image_url)
+        if not expected_image:
+            logger.warning(f"⚠️ Failed to download reference image for @{username}!")
+            return {"success": False, "error": "Failed to download reference image"}
+
+        # Compare images
+        similarity_score, is_similar = compare_images(latest_story, expected_image)
+        if is_similar:
+            success = verify_user_story(username, similarity_score)
+            if success:
+                verified_users_cache.append(username)
+                logger.info(f"✅ @{username} verified successfully!")
+                return {"success": True, "username": username, "similarity_score": similarity_score}
+
+        return {"success": False, "username": username, "error": "Story verification failed"}
+
+
 async def fetch_users_to_verify():
     headers = {"X-Auth-Key": X_AUTH_KEY}
     logger.info(f"🔑 Sending request to fetch users with X-Auth-Key: {X_AUTH_KEY}")
