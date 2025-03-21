@@ -98,7 +98,6 @@ async def verify_stories():
 async def manual_verify(username: str):
     logger.info(f"🔍 Manually verifying @{username}")
 
-    # Connect to Telegram Client
     async with TelegramClient("pepe_story_checker.session", API_ID, API_HASH) as client:
         logger.info("✅ Telegram client connected successfully.")
 
@@ -124,6 +123,7 @@ async def manual_verify(username: str):
         logger.info(f"📊 Calculated similarity score for @{username}: {similarity_score:.2f}")
 
         if similarity_score >= 0.6:  # Direct check against the threshold
+            # Attempt external verification
             success = verify_user_story(username, similarity_score)
             if success:
                 verified_users_cache.append(username)
@@ -135,15 +135,22 @@ async def manual_verify(username: str):
                     "message": f"User @{username} verified with a similarity score of {similarity_score * 100:.2f}%!"
                 }
 
+            # Handle external API failure gracefully
+            logger.warning(f"⚠️ External verification failed for @{username}. Accepting based on similarity.")
+            return {
+                "success": True,
+                "username": username,
+                "similarity_score": similarity_score,
+                "message": f"User @{username} accepted based on similarity score of {similarity_score * 100:.2f}%, but external API failed."
+            }
+
+        # Below threshold
         return {
             "success": False,
             "username": username,
             "similarity_score": similarity_score,
             "error": f"Verification failed. Similarity score {similarity_score * 100:.2f}% is below the threshold of 60%."
         }
-
-
-
 
 async def fetch_users_to_verify():
     headers = {"X-Auth-Key": X_AUTH_KEY}
